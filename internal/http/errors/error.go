@@ -20,7 +20,6 @@ type ValidationErrorResponse struct {
 type Error struct {
 	Code       string
 	Message    string
-	Deprecated bool
 	Details    string
 	StatusCode int
 }
@@ -46,9 +45,8 @@ func GetError(code string, message string, status int) Error {
 // ToGin returns the error in gin format
 func (e Error) ToGin() gin.H {
 	return gin.H{
-		"code":       e.Code,
-		"message":    e.Message,
-		"deprecated": e.Deprecated,
-		"details":    e.Details,
+		"code":    e.Code,
+		"message": e.Message,
+		"details": e.Details,
 	}
 }

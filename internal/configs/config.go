@@ -47,7 +47,7 @@ func Config(key string, fallback string) any {
 
 }
 
-// loadEnv loads the .env file
+// LoadEnv loadEnv loads the .env file
 func LoadEnv() {
 	err := godotenv.Load()
 	if err != nil {

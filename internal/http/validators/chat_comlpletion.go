@@ -5,7 +5,7 @@ import (
 	"qualifire-home-assignment/internal/configs"
 	"qualifire-home-assignment/internal/http/errors"
 	"qualifire-home-assignment/internal/models"
-	"regexp"
+	"qualifire-home-assignment/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -14,7 +14,8 @@ import (
 // ChatCompletion represents the chat completion request payload
 type ChatCompletion struct {
 	// From body
-	Messages []Message `json:"messages" binding:"required,min=1,max=100,dive"`
+	Messages []models.Message `json:"messages" binding:"required,min=1,max=100,dive"`
+	Model    string           `json:"model" binding:"required"`
 
 	// From headers
 	AuthToken string `header:"Authorization" validate:"required"`
@@ -22,14 +23,8 @@ type ChatCompletion struct {
 
 // Message represents a single message in the chat completion request
 type Message struct {
-	Role    string `json:"role" binding:"required,oneof=admin user assistant"`
+	Role    string `json:"role" binding:"required,oneof=system user assistant developer tool"`
 	Content string `json:"content" binding:"required,max=255"`
-}
-
-// VirtualKey represents the virtual key structure
-type VirtualKey struct {
-	Provider string `json:"provider"`
-	ApiKey   string `json:"api_key"`
 }
 
 // Validate validates the ChatCompletion request
@@ -52,36 +47,33 @@ func (cc ChatCompletion) Validate(c *gin.Context) models.Model {
 		panic(errors.Validation{}.GetError(err.Error(), http.StatusBadRequest))
 	}
 	r := ConvertDto(c, cc)
-	return getProxyRequest(r)
+	return GetProxyRequest(r)
 }
 
-// getProxyRequest maps ChatCompletion to ProxyRequest based on virtual keys configuration
-func getProxyRequest(cc *ChatCompletion) models.Model {
-	messages := make([]models.Message, 0)
-	for _, msg := range cc.Messages {
-		messages = append(messages, models.Message{Role: msg.Role, Content: msg.Content})
-	}
-	vk := getKeyInfo(cc)
+// GetProxyRequest maps ChatCompletion to ProxyRequest based on virtual keys configuration
+func GetProxyRequest(cc *ChatCompletion) models.Model {
+	keyInfo, virtualKey := GetKeyInfo(cc)
 	return models.ProxyRequest{
-		Provider: vk["provider"].(string),
-		ApiKey:   vk["api_key"].(string),
-		Messages: messages,
+		Provider:   keyInfo["provider"].(string),
+		ApiKey:     keyInfo["api_key"].(string),
+		Messages:   cc.Messages,
+		Model:      cc.Model,
+		VirtualKey: virtualKey,
 	}
 }
 
-func getKeyInfo(cc *ChatCompletion) map[string]interface{} {
+func GetKeyInfo(cc *ChatCompletion) (map[string]interface{}, string) {
 	virtualKeys := configs.Config("virtual_keys", "")
 	if virtualKeys != "" {
-		re := regexp.MustCompile(`^Bearer ([\w-]+)$`)
-		matches := re.FindStringSubmatch(cc.AuthToken)
-		// If the regex yields different result then 2, the Authorization header format is wrong
-		if len(matches) != 2 {
+		virtualKey, ok := utils.ExtractVirtualKey(cc.AuthToken)
+		// If the extraction fails, the Authorization header format is wrong
+		if !ok {
 			panic(errors.Validation{}.GetError("wrong authorization header format", http.StatusBadRequest))
 		}
 
 		// Checks whether the virtual key exists in the configurations
-		if vk, ok := virtualKeys.(map[string]interface{})[matches[1]]; ok {
-			return vk.(map[string]interface{})
+		if vk, ok := virtualKeys.(map[string]interface{})[virtualKey]; ok {
+			return vk.(map[string]interface{}), virtualKey
 		} else {
 			panic(errors.Validation{}.GetError("wrong virtual key", http.StatusBadRequest))
 		}
