@@ -35,10 +35,11 @@ WORKDIR /qualifire/app
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 # Copy installed binary from $GOBIN
-COPY --from=builder /qualifire/app/bin/cmd ./qualifire
+COPY --from=builder /qualifire/app/bin/api ./api
 
 # Copy runtime files
 COPY --from=builder /qualifire/app/.env .env
-COPY --from=builder /qualifire/app/configs/keys.json keys.json
+RUN mkdir -p /internal/configs
+COPY --from=builder /qualifire/app/internal/configs/keys.json ./internal/configs/keys.json
 
-CMD ["./qualifire"]
+CMD ["./api"]

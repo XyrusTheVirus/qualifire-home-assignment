@@ -123,7 +123,7 @@ HTTP-facing layer, including controllers, errors, middleware, routes, and valida
     - `quota.go` – Quota / virtual key middleware, enforcing usage limits before hitting providers.
 
 - **`routes/`**
-    - Route registration, wiring URL paths and HTTP methods to controllers and middleware.
+    - Route registration, wiring URL paths, and HTTP methods to controllers and middleware.
 
 - **`validators/`**
     - `chat_comlpletion.go` – Validation logic for chat completion requests (required fields, formats).
@@ -234,18 +234,53 @@ Clone the repository:
 
 ### Running with Docker
 
-1. Build and start the service:
+There are two options for running the project with Docker:
+1. Development mode — Powered by [Air](https://github.com/cosmtrek/air) all the project mapped to the container and changes are reflected immediately
+2. Production mode — Runs on a slim debian image and only the compiled binary is present in the container
 
+**Development Mode**
+1. In development mode we should copy the .env.example file into .env
+    ```bash
+        cp .env.example .env
+    ```
+2. Runs the API in production mode:
    ```bash
    docker-compose up --build
    ```
 
-2. The API will be available on the host port defined in `docker-compose.yaml` (for example, `http://localhost:8080`).
+3. The API will be available on the host port defined in `docker-compose.yaml` (for example, `http://localhost:8080`).
 
-3. To stop:
+4. Watch logs:
+
+   ```bash
+   docker-compose logs -f
+   ```
+   
+5. To stop:
 
    ```bash
    docker-compose down
+   ```
+
+---
+
+**Development Mode**
+1. Runs the API in production mode:
+   ```bash
+   docker-compose -f docker-compose.prod.yaml up --build
+   ```
+2. The API will be available on the host port defined in `docker-compose.prod.yaml` (for example, `http://localhost:8080`).
+
+3. Watch logs:
+
+   ```bash
+   docker-compose -f docker-compose.prod.yaml logs -f
+   ```
+   
+4. To stop:
+
+   ```bash
+   docker-compose -f docker-compose.prod.yaml down
    ```
 
 ---
@@ -257,19 +292,20 @@ Clone the repository:
 Typical environment variables (names are illustrative; align with your `config.go`):
 
 - `APP_PORT` – Port on which the HTTP server listens (e.g., `8080`).
-- `APP_ENV` – Environment (`local`, `dev`, `prod`, etc.).
-- `OPENAI_API_KEY` – Real provider API key for OpenAI-backed routes.
-- `ANTHROPIC_API_KEY` – Real provider API key for Anthropic-backed routes.
-- `KEYS_CONFIG_PATH` – Path to the `keys.json` file with virtual key definitions.
-- `LOG_LEVEL` – Log level (`debug`, `info`, `warn`, `error`).
-- `METRICS_ENABLED` – Enable or disable metrics tracking.
+- `APP_ENV` – Environment (`dev`, `stage`, `prod`, etc.).
+- `API_PORT` – The API port exposed by the container.
+- `PROVIDER_REQUEST_TIMEOUT` – Timeout (in seconds) for requests to LLM providers.
+- `PROVIDER_MAX_RETRIES` – Number of retries for failed provider requests.
+- `TLS_HANDSHAKE_TIMEOUT` – TLS handshake timeout (in seconds) for outbound HTTPS calls.
 
 Example `.env`:
 
-bash APP_PORT=8080 APP_ENV=local
-OPENAI_API_KEY=sk-openai-... ANTHROPIC_API_KEY=sk-anthropic-...
-KEYS_CONFIG_PATH=internal/configs/keys.json
-LOG_LEVEL=debug METRICS_ENABLED=true
+APP_ENV=dev
+API_PORT=8080
+ANTHROPIC_ENDPOINT=https://api.anthropic.com
+PROVIDER_REQUEST_TIMEOUT = 30
+PROVIDER_MAX_RETRIES = 0
+TLS_HANDSHAKE_TIMEOUT = 20
 
 ### `keys.json` Virtual Key Configuration
 
@@ -279,11 +315,110 @@ A typical entry includes:
 
 - A virtual key ID (the value sent by the client).
 - A provider identifier (e.g., `openai`, `anthropic`).
-- Optional quotas (max requests, max tokens, etc.).
-- Optional metadata for auditing or routing.
+
+```json
+{
+  "virtual_keys": {
+    "vk_user1_openai": {
+      "provider": "openai",
+      "api_key": "sk-real-openai-key-123"
+    },
+    "vk_user2_anthropic": {
+      "provider": "anthropic",
+      "api_key": "sk-ant-real-anthropic-key-456"
+    },
+    "vk_admin_openai": {
+      "provider": "openai",
+      "api_key": "sk-another-openai-key-789"
+    }
+  }
+}
+```
+
+Conceptually:
+The quota service uses this configuration to enforce per-key limits, while the provider layer uses it to decide where to route requests.
 
 ---
 
+## Example Client Code
+
+### Go HTTP Client
+
+Below is an illustrative Go client showing how to call a chat completion endpoint exposed by this gateway:
+
+``` 
+reqBody := ChatCompletionRequest{
+	Model: "gpt-4.1-mini",
+	Messages: []ChatMessage{
+		{Role: "user", Content: "Hello! How does this gateway work?"},
+	},
+}
+
+data, err := json.Marshal(reqBody)
+if err != nil {
+	panic(err)
+}
+
+req, err := http.NewRequest(http.MethodPost, baseURL+"/v1/chat/completions", bytes.NewReader(data))
+if err != nil {
+	panic(err)
+}
+
+req.Header.Set("Content-Type", "application/json")
+req.Header.Set("Authorization", "Bearer "+virtualKey)
+
+resp, err := http.DefaultClient.Do(req)
+if err != nil {
+	panic(err)
+}
+defer resp.Body.Close()
+
+if resp.StatusCode != http.StatusOK {
+	fmt.Println("request failed with status:", resp.Status)
+	return
+}
+
+var result ChatCompletionResponse
+if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	panic(err)
+}
+
+fmt.Println("Model:", result.Model)
+fmt.Println("Response:", result.Message.Content)
+```
+### Example Requests
+
+**POST /chat/completions**
+
+```
+curl --location 'http://localhost:8080/chat/completions' \
+--header 'Authorization: Bearer vk_user2_anthropic' \
+--header 'Content-Type: application/json' \
+--data '{
+    "model": "claude-3-5-sonnet-20240620",
+    "messages": [
+        {
+            "role": "user",
+            "content": "How do u do?"
+        }
+    ]
+}   
+'
+```
+
+**GET /metrics**
+
+```
+curl --location 'http://localhost:8080/metrics'
+```
+
+**GET /health**
+
+```
+curl --location 'http://localhost:8080/health'
+```
+
+--- 
 ## Implementation Notes
 
 ### Technologies and Design Choices
@@ -325,7 +460,7 @@ Go’s concurrency features are used in several places:
 The project has a strong focus on testability:
 
 - **Unit Tests**
-    - Utilities such as auth header parsing are covered by isolated tests.
+    - Isolated tests cover utilities such as auth header parsing.
     - Quota and metrics services are tested for correctness, edge cases, and concurrency-related behavior (e.g., resetting windows, updating usage).
     - Error helpers are validated to ensure they produce consistent and predictable API responses.
 
@@ -339,5 +474,24 @@ The project has a strong focus on testability:
     - Routes tests confirm that endpoints are wired correctly.
 
 This combination helps ensure that core behaviors—auth, quota, metrics, error handling, and routing—remain stable and regressions are caught early.
+
+---
+
+--- 
+## Improvements and Future Work
+
+The keys for improvement regarding the API are:
+
+1. The whole process of interacting with the LLM providers should be done by message queue (RabbitMQ, Kafka, etc.), so the response to the client won;t take to long in case the communication with the provider is hanging.
+The response then can be sent to the cline via websocket or polling (Depends on the number of users and resources)
+2. In case of high traffic. We can use load balancer to distribute the traffic.
+3. Metrics and statistics should be stored in Redis so we can fetch them quickly and have historical data.
+4. All API keys should be encrypted and stored in a database or secret manager.
+5. Logging should be stored in No SQL database like ElasticSearch for better search and analytics.
+6. The maximum quotas and tokens should be defined inside the provider configurations (File, DB, etc.).
+
+---
+## Notes
+- I didn't manage to make the API work with both Open API and  Anthropic API. Hence, I wrote some comprehensive tests to verify the communication for both providers.
 
 ---

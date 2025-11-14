@@ -1,0 +1,9 @@
+services:
+  app:
+    container_name: app
+    working_dir: /qualifire/app
+    build:
+      context: .
+      target: prod-builder
+    ports:
+      - "8080:8080"
