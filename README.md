@@ -482,16 +482,16 @@ This combination helps ensure that core behaviors—auth, quota, metrics, error 
 
 The keys for improvement regarding the API are:
 
-1. The whole process of interacting with the LLM providers should be done by message queue (RabbitMQ, Kafka, etc.), so the response to the client won;t take to long in case the communication with the provider is hanging.
+- The whole process of interacting with the LLM providers should be done by message queue (RabbitMQ, Kafka, etc.), so the response to the client won;t take to long in case the communication with the provider is hanging.
 The response then can be sent to the cline via websocket or polling (Depends on the number of users and resources)
-2. In case of high traffic. We can use load balancer to distribute the traffic.
-3. Metrics and statistics should be stored in Redis so we can fetch them quickly and have historical data.
-4. All API keys should be encrypted and stored in a database or secret manager.
-5. Logging should be stored in No SQL database like ElasticSearch for better search and analytics.
-6. The maximum quotas and tokens should be defined inside the provider configurations (File, DB, etc.).
+- In case of high traffic. We can use load balancer to distribute the traffic.
+- Metrics and statistics should be stored in Redis so we can fetch them quickly and have historical data.
+- All API keys should be encrypted and stored in a database or secret manager.
+- Logging should be stored in No SQL database like ElasticSearch for better search and analytics.
+- The maximum quotas and tokens should be defined inside the provider configurations (File, DB, etc.).
 
 ---
 ## Notes
-- I didn't manage to make the API work with both Open API and  Anthropic API. Hence, I wrote some comprehensive tests to verify the communication for both providers.
+- I didn't manage to make the API work with both OpenAI and Anthropic APIs. Hence, I wrote some comprehensive tests to verify the communication for both providers.
 
 ---
