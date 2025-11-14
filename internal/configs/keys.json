@@ -2,7 +2,7 @@
   "virtual_keys": {
     "vk_user1_openai": {
       "provider": "openai",
-      "api_key": "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"
+      "api_key": "sk-real-openai-key-123"
     },
     "vk_user2_anthropic": {
       "provider": "anthropic",
