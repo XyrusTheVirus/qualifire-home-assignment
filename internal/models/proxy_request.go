@@ -11,6 +11,6 @@ type ProxyRequest struct {
 
 // Message represents a single message in the chat completion request
 type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string `json:"role" binding:"required,oneof=system user assistant developer tool"`
+	Content string `json:"content" binding:"required,max=255"`
 }

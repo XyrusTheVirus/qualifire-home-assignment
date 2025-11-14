@@ -14,12 +14,12 @@ func HandleRequests() *gin.Engine {
 	if !configs.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)
 	}
+	
 	r.Use(controllers.Recovery())
-
 	g := r.Group("/chat")
-	g.Use(middleware.QuotaMiddleware())
+	g.Use(middleware.QuotaMiddleware(), middleware.MetricsMiddleware())
 	{
-		r.POST("/completions", controllers.ChatCompletions{}.RouteRequests)
+		g.POST("/completions", controllers.ChatCompletions{}.RouteRequests)
 	}
 
 	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })

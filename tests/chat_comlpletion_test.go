@@ -15,12 +15,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// setupTest initializes the test environment by setting test mode and loading configurations
 func setupTest() {
 	os.Setenv("IS_TEST", "1")
 	gin.SetMode(gin.TestMode)
 	configs.LoadConfig()
 }
 
+// TestChatCompletionValidate_Success tests successful validation of chat completion request with valid payload and auth token
 func TestChatCompletionValidate_Success(t *testing.T) {
 	setupTest()
 
@@ -34,7 +36,7 @@ func TestChatCompletionValidate_Success(t *testing.T) {
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest("POST", "/chat/completions", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer test-key-1")
+	req.Header.Set("Authorization", "Bearer vk_user1_openai")
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -47,6 +49,7 @@ func TestChatCompletionValidate_Success(t *testing.T) {
 	assert.Equal(t, 200, w.Code)
 }
 
+// TestChatCompletionValidate_MissingMessages tests validation failure when the messages field is missing from the request
 func TestChatCompletionValidate_MissingMessages(t *testing.T) {
 	setupTest()
 
@@ -70,6 +73,7 @@ func TestChatCompletionValidate_MissingMessages(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
+// TestChatCompletionValidate_InvalidRole tests validation failure when message contains an invalid role
 func TestChatCompletionValidate_InvalidRole(t *testing.T) {
 	setupTest()
 
@@ -83,7 +87,7 @@ func TestChatCompletionValidate_InvalidRole(t *testing.T) {
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest("POST", "/chat/completions", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer test-key-1")
+	req.Header.Set("Authorization", "Bearer vk_user1_openai")
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -96,6 +100,7 @@ func TestChatCompletionValidate_InvalidRole(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
+// TestChatCompletionValidate_MissingAuthToken tests validation behavior when the Authorization header is missing
 func TestChatCompletionValidate_MissingAuthToken(t *testing.T) {
 	setupTest()
 
@@ -125,6 +130,7 @@ func TestChatCompletionValidate_MissingAuthToken(t *testing.T) {
 	cc.Validate(c)
 }
 
+// TestChatCompletionValidate_InvalidAuthFormat tests validation behavior when the Authorization header has invalid format
 func TestChatCompletionValidate_InvalidAuthFormat(t *testing.T) {
 	setupTest()
 
@@ -155,6 +161,7 @@ func TestChatCompletionValidate_InvalidAuthFormat(t *testing.T) {
 	cc.Validate(c)
 }
 
+// TestChatCompletionValidate_InvalidVirtualKey tests validation behavior when the virtual key is invalid or not found
 func TestChatCompletionValidate_InvalidVirtualKey(t *testing.T) {
 	setupTest()
 
@@ -185,21 +192,23 @@ func TestChatCompletionValidate_InvalidVirtualKey(t *testing.T) {
 	cc.Validate(c)
 }
 
+// TestGetKeyInfo_Success tests successful retrieval of key information from a valid authorization token
 func TestGetKeyInfo_Success(t *testing.T) {
 	setupTest()
 
 	cc := &validators.ChatCompletion{
-		AuthToken: "Bearer test-key-1",
+		AuthToken: "Bearer vk_user1_openai",
 	}
 
 	keyInfo, virtualKey := validators.GetKeyInfo(cc)
 
 	assert.NotNil(t, keyInfo)
-	assert.Equal(t, "test-key-1", virtualKey)
+	assert.Equal(t, "vk_user1_openai", virtualKey)
 	assert.Contains(t, keyInfo, "provider")
 	assert.Contains(t, keyInfo, "api_key")
 }
 
+// TestGetKeyInfo_WrongFormat tests error handling when attempting to get key info with wrong authorization format
 func TestGetKeyInfo_WrongFormat(t *testing.T) {
 	setupTest()
 
@@ -216,6 +225,7 @@ func TestGetKeyInfo_WrongFormat(t *testing.T) {
 	validators.GetKeyInfo(cc)
 }
 
+// TestGetProxyRequest_Success tests successful creation of proxy request from chat completion parameters
 func TestGetProxyRequest_Success(t *testing.T) {
 	setupTest()
 
@@ -224,7 +234,7 @@ func TestGetProxyRequest_Success(t *testing.T) {
 			{Role: "user", Content: "Hello"},
 		},
 		Model:     "gpt-3.5-turbo",
-		AuthToken: "Bearer test-key-1",
+		AuthToken: "Bearer vk_user1_openai",
 	}
 
 	result := validators.GetProxyRequest(cc)

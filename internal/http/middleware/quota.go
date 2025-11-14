@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"qualifire-home-assignment/internal/http/errors"
 	"qualifire-home-assignment/internal/services"
+	"qualifire-home-assignment/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,13 +15,13 @@ func QuotaMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
 
-		// Check quota after validation (virtual key is set in context by validator)
-		virtualKeyInterface, exists := c.Get("virtual_key")
+		// Check quota after validation (validator sets virtual key in context)
+		virtualKeyInterface, exists := utils.ExtractVirtualKey(c.GetHeader("Authorization"))
 		if !exists {
 			return
 		}
 
-		virtualKey := virtualKeyInterface.(string)
+		virtualKey := virtualKeyInterface
 		quotaService := services.GetQuotaService()
 
 		// Check quota

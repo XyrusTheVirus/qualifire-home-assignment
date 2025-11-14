@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"qualifire-home-assignment/internal/configs"
+	"qualifire-home-assignment/internal/utils"
 	"qualifire-home-assignment/internal/http/errors"
 )
 
@@ -62,9 +63,16 @@ func (a Anthropic) SendRequest() *Response {
 		panic(errors.ApiProvider{}.GetError(result["error"].(map[string]interface{})["message"].(string), res.StatusCode))
 	}
 
+	responseContent := result["content"].(string)
+
+	// Calculate tokens: input + output
+	inputTokens := utils.CalculateRequestTokens(a.Request.Messages, a.Request.Model)
+	outputTokens := utils.CalculateResponseTokens(responseContent)
+
 	return &Response{
 		Choices: []Message{
-			{Role: result["role"].(string), Content: result["content"].(string)},
+			{Role: result["role"].(string), Content: responseContent},
 		},
+		TokensUsed: inputTokens + outputTokens,
 	}
 }

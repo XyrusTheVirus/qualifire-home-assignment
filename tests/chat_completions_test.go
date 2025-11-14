@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// setupChatCompletionTest prepares the test environment by setting test mode,
+// loading configurations and resetting metrics and quota services for clean state
 func setupChatCompletionTest() {
 	os.Setenv("IS_TEST", "1")
 	gin.SetMode(gin.TestMode)
@@ -23,6 +25,9 @@ func setupChatCompletionTest() {
 	services.GetQuotaService().Reset()
 }
 
+// TestChatCompletions_RouteRequests_MetricsTracking verifies the chat completion
+// endpoint's request handling by setting up a mock OpenAI server and testing the
+// basic routing structure
 func TestChatCompletions_RouteRequests_MetricsTracking(t *testing.T) {
 	setupChatCompletionTest()
 
@@ -63,6 +68,8 @@ func TestChatCompletions_RouteRequests_MetricsTracking(t *testing.T) {
 	assert.NotNil(t, router)
 }
 
+// TestChatCompletions_RouteRequests_QuotaIncrement tests the initial quota state
+// and tracking for a test virtual key to ensure proper quota management
 func TestChatCompletions_RouteRequests_QuotaIncrement(t *testing.T) {
 	setupChatCompletionTest()
 

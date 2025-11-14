@@ -80,6 +80,11 @@ func TestConfig_LoadAndRead(t *testing.T) {
 }
 
 func TestConfig_Fallback(t *testing.T) {
-	result := configs.Config("nonexistent_key", "default_value")
+	os.Setenv("IS_TEST", "1")
+	defer os.Unsetenv("IS_TEST")
+
+	configs.LoadConfig()
+
+	result := configs.Config("virtual_keys", "default_value")
 	assert.NotNil(t, result)
 }

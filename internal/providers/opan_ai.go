@@ -6,6 +6,7 @@ import (
 	"qualifire-home-assignment/internal/configs"
 	"qualifire-home-assignment/internal/http/errors"
 	"qualifire-home-assignment/internal/models"
+	"qualifire-home-assignment/internal/utils"
 
 	"github.com/openai/openai-go/v2"
 	"github.com/openai/openai-go/v2/option"
@@ -40,10 +41,17 @@ func (o OpenAI) SendRequest() *Response {
 		panic(errors.ApiProvider{}.GetError(err.Error(), http.StatusInternalServerError))
 	}
 
+	responseContent := resp.Choices[0].Message.Content
+
+	// Calculate tokens: input + output
+	inputTokens := utils.CalculateRequestTokens(o.Request.Messages, o.Request.Model)
+	outputTokens := utils.CalculateResponseTokens(responseContent)
+
 	return &Response{
 		Choices: []Message{
-			{Role: "user", Content: resp.Choices[0].Message.Content},
+			{Role: "user", Content: responseContent},
 		},
+		TokensUsed: inputTokens + outputTokens,
 	}
 }
 

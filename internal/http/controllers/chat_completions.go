@@ -7,7 +7,6 @@ import (
 	"qualifire-home-assignment/internal/models"
 	"qualifire-home-assignment/internal/providers"
 	"qualifire-home-assignment/internal/services"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,12 +16,13 @@ type ChatCompletions struct{}
 
 // RouteRequests handles the chat completion requests
 func (cp ChatCompletions) RouteRequests(c *gin.Context) {
-	startTime := time.Now()
-
 	req := validators.ChatCompletion{}.Validate(c)
 	proxyReq := req.(models.ProxyRequest)
 
-	// Check quota using a virtual key from context
+	// Store provider in context for metrics middleware
+	c.Set("provider", proxyReq.Provider)
+
+	// Check quota using virtual key
 	virtualKey := proxyReq.VirtualKey
 	quotaService := services.GetQuotaService()
 	allowed, reason := quotaService.CheckQuota(virtualKey)
@@ -34,19 +34,8 @@ func (cp ChatCompletions) RouteRequests(c *gin.Context) {
 
 	result := providers.Factory(proxyReq).SendRequest()
 
-	// Track metrics
-	duration := time.Since(startTime)
-	metricsService := services.GetMetricsService()
-	metricsService.RecordRequest(services.RequestMetric{
-		Provider:   proxyReq.Provider,
-		VirtualKey: virtualKey,
-		Duration:   duration,
-		Status:     http.StatusOK,
-		Timestamp:  startTime,
-	})
-
-	// Increment quota (estimate 100 tokens per request for simplicity)
-	quotaService.IncrementRequest(virtualKey, 100)
+	// Store token count in context for metrics middleware
+	c.Set("token_count", result.TokensUsed)
 
 	Success(c, http.StatusOK, result)
 }

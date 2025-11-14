@@ -30,8 +30,8 @@ var (
 func GetQuotaService() *QuotaService {
 	quotaServiceOnce.Do(func() {
 		quotaServiceInstance = &QuotaService{
-			maxRequests:  100,                // 100 requests per hour
-			maxTokens:    100000,             // 100k tokens per hour
+			maxRequests:  100,    // 100 requests per hour
+			maxTokens:    100000, // 100k tokens per hour
 			windowPeriod: time.Hour,
 		}
 	})
@@ -51,12 +51,18 @@ func (q *QuotaService) CheckQuota(virtualKey string) (bool, string) {
 	if now.Sub(entry.WindowStart) >= q.windowPeriod {
 		entry.RequestCount = 0
 		entry.TokenUsage = 0
+		entry.TokenUsage = 0
 		entry.WindowStart = now
 	}
 
 	// Check request quota
 	if entry.RequestCount >= q.maxRequests {
 		return false, "request quota exceeded"
+	}
+
+	// Check token quota
+	if entry.TokenUsage >= q.maxTokens {
+		return false, "token quota exceeded"
 	}
 
 	// Check token quota

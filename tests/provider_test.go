@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestFactory_OpenAI tests the Factory method with OpenAI provider configuration
+// and verifies it returns the correct provider instance
 func TestFactory_OpenAI(t *testing.T) {
 	req := models.ProxyRequest{
 		Provider: "openai",
@@ -25,6 +27,8 @@ func TestFactory_OpenAI(t *testing.T) {
 	assert.IsType(t, providers.OpenAI{}, provider)
 }
 
+// TestFactory_Anthropic tests the Factory method with Anthropic provider configuration
+// and verifies it returns the correct provider instance
 func TestFactory_Anthropic(t *testing.T) {
 	req := models.ProxyRequest{
 		Provider: "anthropic",
@@ -42,6 +46,8 @@ func TestFactory_Anthropic(t *testing.T) {
 	assert.IsType(t, providers.Anthropic{}, provider)
 }
 
+// TestFactory_UnknownProvider verifies that the Factory method panics
+// when an unknown provider is specified
 func TestFactory_UnknownProvider(t *testing.T) {
 	req := models.ProxyRequest{
 		Provider: "unknown",
@@ -62,6 +68,8 @@ func TestFactory_UnknownProvider(t *testing.T) {
 	providers.Factory(req)
 }
 
+// TestProviderBase_GetHttpClient tests the GetHttpClient method of the ProviderBase
+// and ensures it returns a properly configured HTTP client
 func TestProviderBase_GetHttpClient(t *testing.T) {
 	req := models.ProxyRequest{
 		Provider: "openai",
@@ -81,6 +89,8 @@ func TestProviderBase_GetHttpClient(t *testing.T) {
 	assert.NotZero(t, client.Timeout)
 }
 
+// TestMessage_Structure verifies the Message struct fields
+// are properly set and accessible
 func TestMessage_Structure(t *testing.T) {
 	msg := providers.Message{
 		Role:    "user",
@@ -91,6 +101,8 @@ func TestMessage_Structure(t *testing.T) {
 	assert.Equal(t, "Hello, world!", msg.Content)
 }
 
+// TestResponse_Structure verifies the Response struct fields
+// are properly set and contain the expected message data
 func TestResponse_Structure(t *testing.T) {
 	resp := providers.Response{
 		Choices: []providers.Message{

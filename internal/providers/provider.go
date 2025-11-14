@@ -16,7 +16,8 @@ type Provider interface {
 
 // Response represents a generic response from a provider
 type Response struct {
-	Choices []Message `json:"choices"`
+	Choices      []Message `json:"choices"`
+	TokensUsed   int       `json:"tokens_used,omitempty"`
 }
 
 // ProviderBase provides common fields for all providers

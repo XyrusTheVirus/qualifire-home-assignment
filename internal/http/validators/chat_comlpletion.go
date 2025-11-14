@@ -14,22 +14,15 @@ import (
 // ChatCompletion represents the chat completion request payload
 type ChatCompletion struct {
 	// From body
-	Messages []models.Message `json:"messages" binding:"required,min=1,max=100,dive"`
+	Messages []models.Message `json:"messages" binding:"required,dive" validate:"dive,min=1,max=100"`
 	Model    string           `json:"model" binding:"required"`
 
 	// From headers
 	AuthToken string `header:"Authorization" validate:"required"`
 }
 
-// Message represents a single message in the chat completion request
-type Message struct {
-	Role    string `json:"role" binding:"required,oneof=system user assistant developer tool"`
-	Content string `json:"content" binding:"required,max=255"`
-}
-
 // Validate validates the ChatCompletion request
 func (cc ChatCompletion) Validate(c *gin.Context) models.Model {
-
 	if err := c.ShouldBindJSON(&cc); err != nil {
 		// Iterate through all validation errors and return them as a map
 		if validationErrs, ok := err.(validator.ValidationErrors); ok {
@@ -46,8 +39,8 @@ func (cc ChatCompletion) Validate(c *gin.Context) models.Model {
 	if err := c.ShouldBindHeader(&cc); err != nil {
 		panic(errors.Validation{}.GetError(err.Error(), http.StatusBadRequest))
 	}
-	r := ConvertDto(c, cc)
-	return GetProxyRequest(r)
+
+	return GetProxyRequest(&cc)
 }
 
 // GetProxyRequest maps ChatCompletion to ProxyRequest based on virtual keys configuration
